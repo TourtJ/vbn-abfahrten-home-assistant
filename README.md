@@ -17,20 +17,21 @@ Wenn du GTFS2 bereits installiert hast, sichere zuerst den bisherigen Ordner `cu
 
 ## 2. Den VBN-Fahrplan importieren
 
-1. Beantrage oder lade die aktuelle **GTFS-Fahrplan-ZIP** für Bremen und Niedersachsen über Connect Fahrplanauskunft. Der VBN beschreibt dort den Zugang zu den Solldaten. Verwende einen Fahrplandatensatz, der zum VBN-Echtzeitfeed passt. [VBN Open Data und Open Service](https://www.vbn.de/service/entwicklerinfos/open-data-und-open-service/) · [Connect Open Data](https://www.connect-fahrplanauskunft.de/index.php?id=opendata)
+1. Melde dich im **Connect-OpenData-Portal** an oder registriere dich dort. Aktiviere das GTFS-Fahrplanpaket für Bremen und Niedersachsen, das zum VBN-Echtzeitfeed passt, und lade die ZIP-Datei herunter. Je nach Paket ist der Download sofort verfügbar oder Connect benachrichtigt dich nach der Freischaltung. [Connect-OpenData-Portal](https://www.connect-info.net/opendata/) · [Connect zur Datenbereitstellung](https://connect-fahrplanauskunft.de/datenbereitstellung/)
 2. Lege im Home-Assistant-Konfigurationsordner einen Ordner `gtfs2` an. Kopiere die ZIP-Datei unentpackt als `/config/gtfs2/vbn.zip` hinein.
 3. Öffne **Einstellungen → Geräte & Dienste → Integration hinzufügen**. Suche nach **GTFS 2** und wähle **Eine neue Datenquelle einrichten**.
-4. Wähle unter **Daten extrahieren von** die Option **ZIP**. Gib bei **Neuer Name der Datenquelle** den Namen `vbn` ohne Dateiendung ein. Belasse beim URL-Feld den vorbelegten Wert `na`. Warte anschließend, bis der Import abgeschlossen ist. [GTFS2 zur Einrichtung einer Datenquelle](https://github.com/vingerha/gtfs2/wiki)
+4. Wähle unter **Daten extrahieren von** die Option **ZIP**. Gib bei **Neuer Name der Datenquelle** den Namen `vbn` ohne Dateiendung ein. Belasse beim URL-Feld den vorbelegten Wert `na` und bestätige. [GTFS2 zur Einrichtung einer Datenquelle](https://github.com/vingerha/gtfs2/wiki)
+5. Die Meldung **„Es werden (noch) Daten extrahiert“** schließt beim Erstimport den Dialog. GTFS2 liest die Fahrplandaten im Hintergrund ein und legt dafür `vbn.sqlite` an. Lass Home Assistant weiterlaufen und plane ausreichend Platz für die Datenbank ein. Fahre danach mit **Schritt 3** fort. Falls dort erneut die Extraktionsmeldung erscheint, warte und versuche Schritt 3 später noch einmal.
 
 ## 3. Haltestelle und Echtzeit einrichten
 
 1. Öffne **Einstellungen → Bereiche, Labels & Zonen → Zonen** und lege eine Zone an der echten Haltestelle an, die du anzeigen möchtest. Wenn du beide Fahrtrichtungen brauchst, setze den Mittelpunkt zwischen die Haltepositionen. Merk dir die Zonen-ID, hier als Beispiel `zone.beispielhaltestelle`. [Home Assistant zum Anlegen von Zonen](https://www.home-assistant.io/integrations/zone/#adding-a-new-zone-or-editing-zones)
 2. Wähle erneut **GTFS 2** unter **Integration hinzufügen** und dann **Geplante Abfahrt an Haltestellen in Ihrer Nähe**. Wähle die Quelle `vbn`, als **Objekt/Person zur Verwendung für Lat/Lon** deine Zone und als Namen zum Beispiel **Beispielhaltestelle**.
 3. Öffne bei diesem GTFS2-Eintrag **Konfigurieren**. Stelle den **Radius für die Suche nach Haltestellen** so ein, dass GTFS2 die gewünschten Haltepositionen findet. Ein größerer Radius kann zusätzliche Haltestellen einschließen. Setze die **Prüfung auf zukünftige Abfahrten** zum Beispiel auf 60 Minuten.
-4. Aktiviere **Echtzeitintegration einrichten**. Trage bei **URL zu Reisedaten** `http://gtfsr.vbn.de/gtfsr_connect.bin` ein. Das ist der öffentliche Protobuf-Feed des VBN. Das API-Schlüsselfeld bleibt für diesen Feed leer. [VBN zum Echtzeitfeed und seiner Lizenz](https://www.vbn.de/service/entwicklerinfos/open-data-und-open-service/)
+4. Aktiviere **Echtzeitintegration einrichten**. Trage bei **URL zu Reisedaten** `https://gtfsr.vbn.de/gtfsr_connect.bin` ein. Das ist der öffentliche Protobuf-Feed des VBN. Das API-Schlüsselfeld bleibt für diesen Feed leer. [VBN zum Echtzeitfeed und seiner Lizenz](https://www.vbn.de/service/entwicklerinfos/open-data-und-open-service/)
 5. Prüfe unter **Entwicklerwerkzeuge → Zustände** einen neu angelegten GTFS2-Haltestellensensor. Sobald Abfahrten vorliegen, enthält sein Attribut `next_departures_lines` eine Liste. Findest du keine Sensoren, prüfe den Zonenmittelpunkt, den Suchradius und ob der Fahrplanimport abgeschlossen ist.
 
-Der VBN liefert Echtzeitdaten für einen Teil der Fahrten. Die Anpassung verwendet zuerst die direkte Meldung für die Haltestelle. Fehlt sie, kann GTFS2 für dieselbe Fahrt eine Verspätung von einem vorherigen Halt fortschreiben. Ist beides nicht verfügbar, bleibt es bei der Fahrplanzeit.
+Der VBN liefert Echtzeitdaten für einen Teil der Fahrten. In `next_departures_lines` steht bei jeder Abfahrt unter `realtime_source`, welche Daten vorliegen. `direct` steht für eine direkte Haltmeldung, `estimated` für eine aus einem früheren Halt derselben Fahrt fortgeschriebene Verspätung und `none` für die Fahrplanzeit ohne Echtzeitmeldung. Wenn alle Abfahrten dauerhaft `none` zeigen, prüfe die Feed-URL und ob der Connect-Fahrplan noch aktuell ist.
 
 ## 4. Dashboard-Karte installieren
 
@@ -60,4 +61,4 @@ Für jede weitere Haltestelle wiederholst du Schritt 3 und legst eine weitere Ka
 
 - Die Integration basiert auf [GTFS2 von vingerha](https://github.com/vingerha/gtfs2) und steht unter der [MIT-Lizenz](LICENSE-GTFS2). Die Änderungen zur Echtzeitfortschreibung liegen in `gtfs_helper.py` und `gtfs_rt_helper.py`. Der Paketstand in `manifest.json` lautet `0.5.9.10`.
 - Die Dashboard-Karte basiert auf einer TRIAS-Anpassung der [HA Departure Card von BagelBeef](https://github.com/BagelBeef/ha-departureCard). Dafür gilt die [Apache License 2.0](LICENSE-CARD).
-- Die Daten werden direkt bei den Anbietern bezogen. Der VBN nennt für seinen Echtzeitfeed die Lizenz **CC BY-SA 4.0**. Für den Fahrplandatensatz gelten die Angaben von Connect. [VBN Open Data](https://www.vbn.de/service/entwicklerinfos/open-data-und-open-service/) · [Connect Open Data](https://www.connect-fahrplanauskunft.de/index.php?id=opendata)
+- Die Daten werden direkt bei den Anbietern bezogen. Der VBN nennt für seinen Echtzeitfeed die Lizenz **CC BY-SA 4.0**. Für den Fahrplandatensatz gelten die Angaben von Connect. [VBN Open Data](https://www.vbn.de/service/entwicklerinfos/open-data-und-open-service/) · [Connect-OpenData-Portal](https://www.connect-info.net/opendata/)
