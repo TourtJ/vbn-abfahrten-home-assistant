@@ -6,6 +6,8 @@ Zeige die nächsten Abfahrten einer Haltestelle im Home-Assistant-Dashboard. Die
 
 Das Projekt enthält eine angepasste GTFS2-Integration auf Basis des [Releases 0.5.9.10](https://github.com/vingerha/gtfs2/releases/tag/0.5.9.10) und die [Dashboard-Karte](departures-gtfs2.js). GTFS2 lädt die Fahrpläne und Echtzeitdaten. Die Karte liest die Abfahrten aus den Sensoren von Home Assistant. Die Anleitung verwendet VBN-Daten. Alle Haltestellen und Fahrten im Beispiel sind erfunden.
 
+Geprüft mit Home Assistant **2026.11.2**, einem Connect-Fahrplanimport und dem öffentlichen VBN-Echtzeitfeed. Die Testinstanz lieferte direkte und fortgeschriebene Echtzeitmeldungen. Die Karte wurde im Browser mit diesen Sensorwerten geprüft.
+
 ## 1. Die Integration installieren
 
 1. Lade das Projekt von GitHub über **Code → Download ZIP** herunter und entpacke es auf deinem Computer.
@@ -21,7 +23,7 @@ Wenn du GTFS2 bereits installiert hast, sichere zuerst den bisherigen Ordner `cu
 2. Lege im Home-Assistant-Konfigurationsordner einen Ordner `gtfs2` an. Kopiere die ZIP-Datei unentpackt als `/config/gtfs2/vbn.zip` hinein.
 3. Öffne **Einstellungen → Geräte & Dienste → Integration hinzufügen**. Suche nach **GTFS 2** und wähle **Eine neue Datenquelle einrichten**.
 4. Wähle unter **Daten extrahieren von** die Option **ZIP**. Gib bei **Neuer Name der Datenquelle** den Namen `vbn` ohne Dateiendung ein. Belasse beim URL-Feld den vorbelegten Wert `na` und bestätige. [GTFS2 zur Einrichtung einer Datenquelle](https://github.com/vingerha/gtfs2/wiki)
-5. Die Meldung **„Es werden (noch) Daten extrahiert“** schließt beim Erstimport den Dialog. GTFS2 liest die Fahrplandaten im Hintergrund ein und legt dafür `vbn.sqlite` an. Lass Home Assistant weiterlaufen und plane ausreichend Platz für die Datenbank ein. Fahre danach mit **Schritt 3** fort. Falls dort erneut die Extraktionsmeldung erscheint, warte und versuche Schritt 3 später noch einmal.
+5. Die Meldung **„Es werden (noch) Daten extrahiert“** schließt beim Erstimport den Dialog. GTFS2 liest die Fahrplandaten im Hintergrund ein und legt dafür `vbn.sqlite` an. Lass Home Assistant weiterlaufen und plane ausreichend Platz für den Import ein. Beim Test ergab eine ZIP-Datei von rund 45 MB eine Datenbank von rund 1,1 GB. Fahre danach mit **Schritt 3** fort. Falls dort erneut die Extraktionsmeldung erscheint, warte und versuche Schritt 3 später noch einmal.
 
 ## 3. Haltestelle und Echtzeit einrichten
 
@@ -29,9 +31,12 @@ Wenn du GTFS2 bereits installiert hast, sichere zuerst den bisherigen Ordner `cu
 2. Wähle erneut **GTFS 2** unter **Integration hinzufügen** und dann **Geplante Abfahrt an Haltestellen in Ihrer Nähe**. Wähle die Quelle `vbn`, als **Objekt/Person zur Verwendung für Lat/Lon** deine Zone und als Namen zum Beispiel **Beispielhaltestelle**.
 3. Öffne bei diesem GTFS2-Eintrag **Konfigurieren**. Stelle den **Radius für die Suche nach Haltestellen** so ein, dass GTFS2 die gewünschten Haltepositionen findet. Ein größerer Radius kann zusätzliche Haltestellen einschließen. Setze die **Prüfung auf zukünftige Abfahrten** zum Beispiel auf 60 Minuten.
 4. Aktiviere **Echtzeitintegration einrichten**. Trage bei **URL zu Reisedaten** `https://gtfsr.vbn.de/gtfsr_connect.bin` ein. Das ist der öffentliche Protobuf-Feed des VBN. Das API-Schlüsselfeld bleibt für diesen Feed leer. [VBN zum Echtzeitfeed und seiner Lizenz](https://www.vbn.de/service/entwicklerinfos/open-data-und-open-service/)
-5. Prüfe unter **Entwicklerwerkzeuge → Zustände** einen neu angelegten GTFS2-Haltestellensensor. Sobald Abfahrten vorliegen, enthält sein Attribut `next_departures_lines` eine Liste. Findest du keine Sensoren, prüfe den Zonenmittelpunkt, den Suchradius und ob der Fahrplanimport abgeschlossen ist.
+5. Lade den GTFS2-Eintrag nach dem Speichern über sein Menü **⋮ → Neu laden** neu, damit die Echtzeitoptionen und der Suchradius sofort angewendet werden. Alternativ führe unter **Entwicklerwerkzeuge → Aktionen** die Aktion **Lokale GTFS-Stopps aktualisieren** für deine Zone aus.
+6. Prüfe unter **Entwicklerwerkzeuge → Zustände** einen neu angelegten GTFS2-Haltestellensensor. Sobald Abfahrten vorliegen, enthält sein Attribut `next_departures_lines` eine Liste. Findest du keine Sensoren, prüfe den Zonenmittelpunkt, den Suchradius und ob der Fahrplanimport abgeschlossen ist.
 
 Der VBN liefert Echtzeitdaten für einen Teil der Fahrten. In `next_departures_lines` steht bei jeder Abfahrt unter `realtime_source`, welche Daten vorliegen. `direct` steht für eine direkte Haltmeldung, `estimated` für eine aus einem früheren Halt derselben Fahrt fortgeschriebene Verspätung und `none` für die Fahrplanzeit ohne Echtzeitmeldung. Wenn alle Abfahrten dauerhaft `none` zeigen, prüfe die Feed-URL und ob der Connect-Fahrplan noch aktuell ist.
+
+Wenn du Home Assistant Core direkt aus einer Python-Umgebung startest, starte den Prozess im Konfigurationsordner mit der `configuration.yaml`. GTFS2 legt dort unter `www/gtfs2` eine Zwischendatei für den Echtzeitfeed an. Das offizielle Container-Image verwendet diesen Arbeitsordner bereits. [Home-Assistant-Startskript](https://github.com/home-assistant/core/blob/2026.11.2/rootfs/etc/services.d/home-assistant/run)
 
 ## 4. Dashboard-Karte installieren
 
